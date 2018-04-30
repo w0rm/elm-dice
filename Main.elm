@@ -79,12 +79,12 @@ randomBox =
 
 delta : Float
 delta =
-    5
+    4
 
 
 angle : Float
 angle =
-    pi / 4
+    pi / 3
 
 
 newWorld : Physics.World
@@ -129,7 +129,7 @@ init =
     ( { screenWidth = 1
       , screenHeight = 1
       , world = newWorld
-      , devicePixelRatio = 1
+      , devicePixelRatio = 2
       , texture = Nothing
       }
     , Cmd.batch
@@ -369,7 +369,7 @@ vertex =
           gl_Position = perspective * camera * transform * vec4(position, 1.0);
           highp vec3 transformedNormal = normalize(mat3(transformNormals) * normal);
           highp float directional = max(dot(transformedNormal, directionalVector), 0.0);
-          vlighting = 1.0; //ambientLight + directional * directionalLight;
+          vlighting = ambientLight + directional * directionalLight;
           vTextureNumber = textureNumber;
           vTexturePosition = texturePosition;
         }
