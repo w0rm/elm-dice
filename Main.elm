@@ -231,7 +231,6 @@ type alias Uniforms =
     { camera : Mat4
     , perspective : Mat4
     , transform : Mat4
-    , transformNormals : Mat4
     , texture : Texture
     }
 
@@ -257,8 +256,6 @@ addShape camera perspective texture { transform, bodyId } =
                 cubeMesh
             )
             { transform = transform
-            , transformNormals =
-                Mat4.transpose (Mat4.inverse transform |> Maybe.withDefault Mat4.identity)
             , perspective = perspective
             , camera = camera
             , texture = texture
@@ -289,36 +286,36 @@ planeMesh =
 cubeMesh : Mesh Attributes
 cubeMesh =
     let
-        rft =
-            vec3 1 1 1
+        v0 =
+            vec3 -1 -1 -1
 
-        lft =
-            vec3 -1 1 1
-
-        lbt =
-            vec3 -1 -1 1
-
-        rbt =
-            vec3 1 -1 1
-
-        rbb =
+        v1 =
             vec3 1 -1 -1
 
-        rfb =
+        v2 =
             vec3 1 1 -1
 
-        lfb =
+        v3 =
             vec3 -1 1 -1
 
-        lbb =
-            vec3 -1 -1 -1
+        v4 =
+            vec3 -1 -1 1
+
+        v5 =
+            vec3 1 -1 1
+
+        v6 =
+            vec3 1 1 1
+
+        v7 =
+            vec3 -1 1 1
     in
-        [ face rft rfb rbb rbt 0
-        , face rft rfb lfb lft 1
-        , face rft lft lbt rbt 2
-        , face rfb lfb lbb rbb 3
-        , face lft lfb lbb lbt 4
-        , face rbt rbb lbb lbt 5
+        [ face v3 v2 v1 v0 0
+        , face v4 v5 v6 v7 1
+        , face v5 v4 v0 v1 2
+        , face v2 v3 v7 v6 3
+        , face v0 v4 v7 v3 4
+        , face v1 v2 v6 v5 5
         ]
             |> List.concat
             |> WebGL.triangles
@@ -348,27 +345,26 @@ face a b c d number =
 vertex : Shader Attributes Uniforms Varying
 vertex =
     [glsl|
-        precision mediump float;
+        precision highp float;
         attribute vec3 position;
         attribute vec3 texturePosition;
-        attribute highp float textureNumber;
+        attribute float textureNumber;
         attribute vec3 normal;
         uniform mat4 camera;
         uniform mat4 perspective;
         uniform mat4 transform;
-        uniform mat4 transformNormals;
         uniform sampler2D texture;
         varying vec3 vTexturePosition;
         varying float vTextureNumber;
         varying float vlighting;
-        highp float ambientLight = 0.4;
-        highp float directionalLight = 0.6;
-        highp vec3 directionalVector = vec3(0, 0, 1);
+        float ambientLight = 0.3;
+        float directionalLight = 0.7;
+        vec3 directionalVector = normalize(vec3(0.3, 0.1, 1.0));
 
         void main () {
           gl_Position = perspective * camera * transform * vec4(position, 1.0);
-          highp vec3 transformedNormal = normalize(mat3(transformNormals) * normal);
-          highp float directional = max(dot(transformedNormal, directionalVector), 0.0);
+          vec4 transformedNormal = normalize(transform * vec4(normal, 0.0));
+          float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
           vlighting = ambientLight + directional * directionalLight;
           vTextureNumber = textureNumber;
           vTexturePosition = texturePosition;
@@ -386,9 +382,9 @@ fragment =
         uniform sampler2D texture;
         void main () {
           if (vTextureNumber < 6.0) {
-            gl_FragColor = texture2D(texture, vec2((vTexturePosition.x + vTextureNumber) / 8.0, vTexturePosition.y));
+            gl_FragColor = vec4(vlighting * vec3(texture2D(texture, vec2((vTexturePosition.x + vTextureNumber) / 8.0, vTexturePosition.y))), 1.0);
           } else {
-            gl_FragColor = vec4(vlighting * vec3(0.4, 0.4, 0.4), 1.0);
+            gl_FragColor = vec4(vlighting * vec3(0.3, 0.3, 0.3), 1.0);
           }
         }
     |]
