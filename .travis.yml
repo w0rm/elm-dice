@@ -1,0 +1,38 @@
+language: node_js
+cache:
+  directories:
+  - node_modules
+  - elm-stuff
+git:
+  depth: 150
+branches:
+  only:
+  - master
+before_install:
+- |
+  if [ ! -d sysconfcpus/bin ];
+  then
+    git clone https://github.com/obmarg/libsysconfcpus.git;
+    cd libsysconfcpus;
+    ./configure --prefix=$TRAVIS_BUILD_DIR/sysconfcpus;
+    make && make install;
+    cd ..;
+    rm -rf libsysconfcpus;
+  fi
+install:
+- npm install -g elm@0.18.0 uglify-js@2.4.11
+- mv $(npm config get prefix)/bin/elm-make $(npm config get prefix)/bin/elm-make-old
+- printf '%s\n\n' '#!/bin/bash' 'echo "Running elm-make with sysconfcpus -n 2"' '$TRAVIS_BUILD_DIR/sysconfcpus/bin/sysconfcpus
+  -n 2 elm-make-old "$@"' > $(npm config get prefix)/bin/elm-make
+- chmod +x $(npm config get prefix)/bin/elm-make
+- curl -OL http://dl.itch.ovh/butler/linux-amd64/head/butler
+- chmod +x butler
+script:
+- "./scripts/deploy.sh"
+notifications:
+  email:
+    recipients:
+    - unsoundscapes@gmail.com
+env:
+  global:
+    secure: VhDOEvdJGgxDKnDgED5i6FklFYw2OEkfE376EN+2QTotV/OcUE5kIDeyACeqa35YvlzY1nkG+giB8l86rEpFR1md0FitZtX3NQbRJYrqdqSW8N0aGRtiH2prbOxenpmQKrganIvg7zQFWWvavxbUN4o/dxWfJzxtthQB9UZaDz8QqA4xAQYdGOe8qjXU5xTwNq/yLh3ZTHjscF29GpWETIj6ccrO3g3OyAfjeXLoKFv2+5BWdNDJqK8nwpyy5YxuxLaU1eeXx61jzxyKxCDESh1AWJ5kRRRVxnHKeCYIfEBqvInQJw/Ept2v3oxdZrCNLnklPxIDkzccvJkeVShsFjFaMV1GsDKy6GU0cxTs9wgKqEyy/VzZ+xv5Ul0dtHCtYGcAuuFUO2yRsx2veBV7zmX6N0GSY+oeHRBG+EyNkHiNCUc2erFi9HThmUAtOlL+VVLDh92B+DUmoTHRZDZ35+KKhMvMAzbgiS4nWoAdR5yaMfF5cxTWERLhAtuMi23ala9GdDl/rg5URTmPgBUw8H837rJTMtu3qv9A+OrJJFmoQlI8zI85Uxt3RURqcvJgXXzk9nNij5z+ntMZQz2Fv77BdjfMqQzjhZGrNf4FtQfMFHI5wKgycMwXo9LdqOT4vkAlrsuTpCoyVPNrtTJQs9ETyfHr0fRO0SQ42AaQzKE=
