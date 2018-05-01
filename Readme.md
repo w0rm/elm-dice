@@ -2,6 +2,6 @@
 
 <img src="https://raw.githubusercontent.com/w0rm/elm-dice/master/examples/dice.gif" alt="Dice">
 
-Physically simulated dice roller.
+[Click to play online here!](https://unsoundscapes.itch.io/dice)
 
-[Play online here!](https://unsoundscapes.itch.io/dice)
+Built in one night for the [Elm Game Jam](https://itch.io/jam/elm-game-jam-mar-apr-2018) as a demonstation of the [elm-physics](https://github.com/w0rm/elm-physics) engine.
