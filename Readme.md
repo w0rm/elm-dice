@@ -1,6 +1,6 @@
 # Dice
 
-<img src="https://raw.githubusercontent.com/w0rm/elm-dice/master/examples/dice.gif" alt="Dice">
+<img src="https://raw.githubusercontent.com/w0rm/elm-dice/master/dice.gif" alt="Dice">
 
 [Click to play online here!](https://unsoundscapes.itch.io/dice)
 
