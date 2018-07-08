@@ -182,12 +182,7 @@ subscriptions model =
 
 view : Model -> Html Msg
 view { screenWidth, screenHeight, devicePixelRatio, world, texture } =
-    WebGL.toHtmlWith
-        [ WebGL.depth 1
-        , WebGL.alpha True
-        , WebGL.antialias
-        , WebGL.clearColor 0 0 0 1
-        ]
+    WebGL.toHtml
         [ width (round (screenWidth * devicePixelRatio))
         , height (round (screenHeight * devicePixelRatio))
         , style
@@ -203,19 +198,13 @@ view { screenWidth, screenHeight, devicePixelRatio, world, texture } =
 
             perspective =
                 Mat4.makePerspective 24 (screenWidth / screenHeight) 5 2000
-
-            entities =
-                texture
-                    |> Maybe.map
-                        (\text ->
-                            Physics.foldl (addShape camera perspective text) [] world
-                        )
-                    |> Maybe.withDefault []
-
-            -- Uncomment to see collision points
-            -- |> addContacts camera perspective (Physics.contacts world)
          in
-            entities
+            texture
+                |> Maybe.map
+                    (\text ->
+                        Physics.foldl (addShape camera perspective text) [] world
+                    )
+                |> Maybe.withDefault []
         )
 
 
@@ -345,7 +334,7 @@ face a b c d number =
 vertex : Shader Attributes Uniforms Varying
 vertex =
     [glsl|
-        precision highp float;
+        precision mediump float;
         attribute vec3 position;
         attribute vec3 texturePosition;
         attribute float textureNumber;
@@ -357,11 +346,10 @@ vertex =
         varying vec3 vTexturePosition;
         varying float vTextureNumber;
         varying float vlighting;
-        float ambientLight = 0.3;
-        float directionalLight = 0.7;
-        vec3 directionalVector = normalize(vec3(0.3, 0.1, 1.0));
-
         void main () {
+          float ambientLight = 0.3;
+          float directionalLight = 0.7;
+          vec3 directionalVector = normalize(vec3(0.3, 0.1, 1.0));
           gl_Position = perspective * camera * transform * vec4(position, 1.0);
           vec4 transformedNormal = normalize(transform * vec4(normal, 0.0));
           float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
@@ -376,12 +364,12 @@ fragment : Shader {} Uniforms Varying
 fragment =
     [glsl|
         precision mediump float;
+        uniform sampler2D texture;
         varying vec3 vTexturePosition;
         varying float vTextureNumber;
         varying float vlighting;
-        uniform sampler2D texture;
         void main () {
-          if (vTextureNumber < 6.0) {
+          if (ceil(vTextureNumber) < 6.0) {
             gl_FragColor = vec4(vlighting * vec3(texture2D(texture, vec2((vTexturePosition.x + vTextureNumber) / 8.0, vTexturePosition.y))), 1.0);
           } else {
             gl_FragColor = vec4(vlighting * vec3(0.3, 0.3, 0.3), 1.0);
