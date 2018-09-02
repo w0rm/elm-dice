@@ -1,4 +1,4 @@
-module Dice exposing (main)
+module Main exposing (main)
 
 import Browser
 import Browser.Dom exposing (getViewport)
