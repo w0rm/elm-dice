@@ -2,19 +2,17 @@ module Dice exposing (main)
 
 import AnimationFrame
 import Html exposing (Html)
-import Html exposing (Html)
-import Html.Attributes exposing (width, height, style)
+import Html.Attributes exposing (height, style, width)
 import Html.Events exposing (onClick)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import WebGL.Texture as Texture exposing (Error, Texture)
 import Physics
+import Random
 import Task
 import Time exposing (Time)
-import WebGL exposing (Entity, Shader, Mesh)
+import WebGL exposing (Entity, Mesh, Shader)
+import WebGL.Texture as Texture exposing (Error, Texture)
 import Window
-import Random
 
 
 type alias Model =
@@ -95,33 +93,33 @@ newWorld =
                 |> Physics.addShape Physics.plane
                 |> Physics.offsetBy (vec3 0 0 -3)
     in
-        Physics.world
-            |> Physics.setGravity (vec3 0 0 -10)
-            |> Physics.addBody
-                (Physics.body
-                    |> Physics.addShape Physics.plane
-                    |> Physics.offsetBy (vec3 0 0 -3)
-                )
-            |> Physics.addBody
-                (plane
-                    |> Physics.offsetBy (vec3 -delta 0 0)
-                    |> Physics.rotateBy Vec3.j angle
-                )
-            |> Physics.addBody
-                (plane
-                    |> Physics.offsetBy (vec3 delta 0 0)
-                    |> Physics.rotateBy Vec3.j -angle
-                )
-            |> Physics.addBody
-                (plane
-                    |> Physics.offsetBy (vec3 0 -delta 0)
-                    |> Physics.rotateBy Vec3.i -angle
-                )
-            |> Physics.addBody
-                (plane
-                    |> Physics.offsetBy (vec3 0 delta 0)
-                    |> Physics.rotateBy Vec3.i angle
-                )
+    Physics.world
+        |> Physics.setGravity (vec3 0 0 -10)
+        |> Physics.addBody
+            (Physics.body
+                |> Physics.addShape Physics.plane
+                |> Physics.offsetBy (vec3 0 0 -3)
+            )
+        |> Physics.addBody
+            (plane
+                |> Physics.offsetBy (vec3 -delta 0 0)
+                |> Physics.rotateBy Vec3.j angle
+            )
+        |> Physics.addBody
+            (plane
+                |> Physics.offsetBy (vec3 delta 0 0)
+                |> Physics.rotateBy Vec3.j -angle
+            )
+        |> Physics.addBody
+            (plane
+                |> Physics.offsetBy (vec3 0 -delta 0)
+                |> Physics.rotateBy Vec3.i -angle
+            )
+        |> Physics.addBody
+            (plane
+                |> Physics.offsetBy (vec3 0 delta 0)
+                |> Physics.rotateBy Vec3.i angle
+            )
 
 
 init : ( Model, Cmd Msg )
@@ -185,11 +183,9 @@ view { screenWidth, screenHeight, devicePixelRatio, world, texture } =
     WebGL.toHtml
         [ width (round (screenWidth * devicePixelRatio))
         , height (round (screenHeight * devicePixelRatio))
-        , style
-            [ ( "display", "block" )
-            , ( "width", toString screenWidth ++ "px" )
-            , ( "height", toString screenHeight ++ "px" )
-            ]
+        , style "display" "block"
+        , style "width" (toString screenWidth ++ "px")
+        , style "height" (toString screenHeight ++ "px")
         , onClick Restart
         ]
         (let
@@ -199,12 +195,12 @@ view { screenWidth, screenHeight, devicePixelRatio, world, texture } =
             perspective =
                 Mat4.makePerspective 24 (screenWidth / screenHeight) 5 2000
          in
-            texture
-                |> Maybe.map
-                    (\text ->
-                        Physics.foldl (addShape camera perspective text) [] world
-                    )
-                |> Maybe.withDefault []
+         texture
+            |> Maybe.map
+                (\text ->
+                    Physics.foldl (addShape camera perspective text) [] world
+                )
+            |> Maybe.withDefault []
         )
 
 
@@ -237,10 +233,11 @@ addShape camera perspective texture { transform, bodyId } =
         (WebGL.entity
             vertex
             fragment
-            (-- This is hardcoded for now, because the plane body is the first added.
-             -- TODO: pull the mesh info from somewhere else, using the bodyId and shapeId
-             if bodyId < 5 then
+            -- This is hardcoded for now, because the plane body is the first added.
+            -- TODO: pull the mesh info from somewhere else, using the bodyId and shapeId
+            (if bodyId < 5 then
                 planeMesh
+
              else
                 cubeMesh
             )
@@ -262,14 +259,14 @@ planeMesh =
         size =
             10
     in
-        WebGL.triangles
-            (face
-                (vec3 size size 0)
-                (vec3 -size size 0)
-                (vec3 -size -size 0)
-                (vec3 size -size 0)
-                6
-            )
+    WebGL.triangles
+        (face
+            (vec3 size size 0)
+            (vec3 -size size 0)
+            (vec3 -size -size 0)
+            (vec3 size -size 0)
+            6
+        )
 
 
 cubeMesh : Mesh Attributes
@@ -299,15 +296,15 @@ cubeMesh =
         v7 =
             vec3 -1 1 1
     in
-        [ face v3 v2 v1 v0 0
-        , face v4 v5 v6 v7 1
-        , face v5 v4 v0 v1 2
-        , face v2 v3 v7 v6 3
-        , face v0 v4 v7 v3 4
-        , face v1 v2 v6 v5 5
-        ]
-            |> List.concat
-            |> WebGL.triangles
+    [ face v3 v2 v1 v0 0
+    , face v4 v5 v6 v7 1
+    , face v5 v4 v0 v1 2
+    , face v2 v3 v7 v6 3
+    , face v0 v4 v7 v3 4
+    , face v1 v2 v6 v5 5
+    ]
+        |> List.concat
+        |> WebGL.triangles
 
 
 face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Float -> List ( Attributes, Attributes, Attributes )
@@ -316,15 +313,15 @@ face a b c d number =
         normal =
             Vec3.cross (Vec3.sub a b) (Vec3.sub a c)
     in
-        [ ( Attributes a normal number (vec3 0 0 0)
-          , Attributes b normal number (vec3 1 0 0)
-          , Attributes c normal number (vec3 1 1 0)
-          )
-        , ( Attributes c normal number (vec3 1 1 0)
-          , Attributes d normal number (vec3 0 1 0)
-          , Attributes a normal number (vec3 0 0 0)
-          )
-        ]
+    [ ( Attributes a normal number (vec3 0 0 0)
+      , Attributes b normal number (vec3 1 0 0)
+      , Attributes c normal number (vec3 1 1 0)
+      )
+    , ( Attributes c normal number (vec3 1 1 0)
+      , Attributes d normal number (vec3 0 1 0)
+      , Attributes a normal number (vec3 0 0 0)
+      )
+    ]
 
 
 
