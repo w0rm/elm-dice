@@ -9,6 +9,7 @@ import Html.Events exposing (onClick)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Physics.Body as Body exposing (Body)
+import Physics.Material as Material exposing (Material)
 import Physics.World as World exposing (World)
 import Random
 import Task
@@ -20,7 +21,6 @@ type alias Model =
     { screenWidth : Float
     , screenHeight : Float
     , world : World Shape
-    , devicePixelRatio : Float
     , texture : Maybe Texture
     }
 
@@ -48,16 +48,26 @@ main =
         }
 
 
+bouncyAndSlippery : Material
+bouncyAndSlippery =
+    Material.custom
+        { friction = 0.1
+        , bounciness = 0.5
+        }
+
+
 box : Body Shape
 box =
     Body.box { x = 2, y = 2, z = 2 } Dice
-        |> Body.setMass 1
+        |> Body.setMass 5
+        |> Body.setMaterial bouncyAndSlippery
         |> Body.moveBy { x = 0, y = 0, z = 15 }
 
 
 plane : Body Shape
 plane =
     Body.plane Plane
+        |> Body.setMaterial bouncyAndSlippery
         |> Body.moveBy { x = 0, y = 0, z = -3 }
 
 
@@ -76,22 +86,17 @@ randomWorld =
 randomBox : Random.Generator (Body Shape)
 randomBox =
     Random.map4
-        (\a x y z ->
-            box
-                |> Body.rotateBy a { x = x, y = y, z = z }
-        )
+        (\a x y z -> Body.rotateBy a { x = x, y = y, z = z } box)
         (Random.float -pi pi)
-        (Random.float -1 1)
-        (Random.float -1 1)
-        (Random.float -1 1)
+        (Random.float -1.5 1.5)
+        (Random.float -1.5 1.5)
+        (Random.float -1.5 1.5)
 
 
-{-| A pair of initial world and the last plane id
--}
 initialWorld : World Shape
 initialWorld =
     World.empty
-        |> World.setGravity { x = 0, y = 0, z = -20 }
+        |> World.setGravity { x = 0, y = 0, z = -10 }
         |> World.add plane
         |> World.add
             (plane
@@ -120,7 +125,6 @@ init _ =
     ( { screenWidth = 1
       , screenHeight = 1
       , world = initialWorld
-      , devicePixelRatio = 2
       , texture = Nothing
       }
     , Cmd.batch
@@ -176,10 +180,10 @@ subscriptions model =
 
 
 view : Model -> Html Msg
-view { screenWidth, screenHeight, devicePixelRatio, world, texture } =
+view { screenWidth, screenHeight, world, texture } =
     WebGL.toHtml
-        [ width (round (screenWidth * devicePixelRatio))
-        , height (round (screenHeight * devicePixelRatio))
+        [ width (round (screenWidth * 2))
+        , height (round (screenHeight * 2))
         , style "position" "absolute"
         , style "left" "0"
         , style "top" "0"
@@ -196,9 +200,7 @@ view { screenWidth, screenHeight, devicePixelRatio, world, texture } =
          in
          texture
             |> Maybe.map
-                (\text ->
-                    List.foldl (addEntity camera perspective text) [] (World.getBodies world)
-                )
+                (\text -> List.map (toEntity camera perspective text) (World.getBodies world))
             |> Maybe.withDefault []
         )
 
@@ -226,25 +228,23 @@ type alias Varying =
     }
 
 
-addEntity : Mat4 -> Mat4 -> Texture -> Body Shape -> List Entity -> List Entity
-addEntity camera perspective texture body =
-    (::)
-        (WebGL.entity
-            vertex
-            fragment
-            (case Body.getData body of
-                Plane ->
-                    planeMesh
+toEntity : Mat4 -> Mat4 -> Texture -> Body Shape -> Entity
+toEntity camera perspective texture body =
+    WebGL.entity
+        vertex
+        fragment
+        (case Body.getData body of
+            Plane ->
+                planeMesh
 
-                Dice ->
-                    cubeMesh
-            )
-            { transform = Mat4.fromRecord (Body.getTransformation body)
-            , perspective = perspective
-            , camera = camera
-            , texture = texture
-            }
+            Dice ->
+                diceMesh
         )
+        { transform = Mat4.fromRecord (Body.getTransformation body)
+        , perspective = perspective
+        , camera = camera
+        , texture = texture
+        }
 
 
 
@@ -258,12 +258,12 @@ planeMesh =
         (vec3 -10 10 0)
         (vec3 -10 -10 0)
         (vec3 10 -10 0)
-        6
+        7
         |> WebGL.triangles
 
 
-cubeMesh : Mesh Attributes
-cubeMesh =
+diceMesh : Mesh Attributes
+diceMesh =
     let
         v0 =
             vec3 -1 -1 -1
@@ -359,9 +359,11 @@ fragment =
         varying float vTextureNumber;
         varying float vlighting;
         void main () {
-          if (ceil(vTextureNumber) < 6.0) {
+          if (vTextureNumber < 6.0) {
+            // Cube face
             gl_FragColor = vec4(vlighting * vec3(texture2D(texture, vec2((vTexturePosition.x + vTextureNumber) / 8.0, vTexturePosition.y))), 1.0);
           } else {
+            // Floor
             gl_FragColor = vec4(vlighting * vec3(0.3, 0.3, 0.3), 1.0);
           }
         }
